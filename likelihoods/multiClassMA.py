@@ -109,7 +109,7 @@ class MultiClassMA(Likelihood):
     def one_of_K(self, y, K):
         Yhat = np.ones((y.shape[0], K))
         for k in range(K):
-            Yhat[:,k,None] = (y==k+1).astype(np.int)
+            Yhat[:,k,None] = (y==k+1).astype(np.int_)
         return Yhat
     
     def GaussHermiteMC(self, gh_f, gh_w, m_f, v_f, K):
