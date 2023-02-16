@@ -88,7 +88,6 @@ class MultiClassMAA(Likelihood):
         p = ef / (1 + ef)
         p = np.clip(p, 1e-9, 1. - 1e-9)  # numerical stability
         d2logp = - p / (1 + ef)
-        #d2logp = (1 / (1 + ef))*((p*(y - 1)/((1 + ef)*(1 - p)**2)) - p*y + (1 - y)*(p**2 / (1 - p)))
         return d2logp
     
     def KappaFuncEx(self, m, v):
@@ -177,30 +176,12 @@ class MultiClassMAA(Likelihood):
             prod_k_zeta = np.sum((Yhat*np.reshape(zeta_kn, (N, K, 1))),axis=1)
             alpha_nr = 1/(pi_rn*prod_k_zeta + (1-pi_rn)/K)
             alpha_nr[alpha_nr < 1e-6] = 1e-6 #numerical stability
-            # alpha_nr1 = np.zeros((N,R))
-            # for n in range(N):
-            #     for r in range(R):
-            #         alpha_nr1[n,r] = 1/(pi_rn[n,r]*prod_k_zeta[n,r] + (1-pi_rn[n,r])/K)
-            # d_dfk1 = np.zeros((N,K))
-            # for n in range(N):
-            #     for k in range(K):
-            #         aux = 0
-            #         for r in range(R):
-            #             aux += alpha_nr[n,r]*pi_rn[n,r]*zeta_kn[n,k]*(Yhat[n,k,r]-prod_k_zeta[n,r])
-            #         d_dfk1[n,k] = aux
-                    
 
             d_dfk = np.reshape(zeta_kn, (N, K, 1))*np.reshape(pi_rn*alpha_nr, (N, 1, R))*(Yhat 
                                                                                     - np.reshape(prod_k_zeta, (N, 1, R)))
             d_dfk = d_dfk*np.reshape(iAnn, (N,1,R))
             var_exp_dm_C[:,i,:K] = np.sum(d_dfk,axis=2)
             
-            
-            # d_dflr1 = np.zeros((N,R))
-            # for n in range(N):
-            #     for r in range(R):
-            #         d_dflr1[n,r] = alpha_nr[n,r]*(pi_rn[n,r]-pi_rn[n,r]**2)*(prod_k_zeta[n,r]-1/K)
-                    
       
             d_dflr = alpha_nr*(pi_rn-pi_rn**2)*(prod_k_zeta-(1/K))*iAnn
             var_exp_dm_C[:,i,K:] = d_dflr
@@ -209,83 +190,30 @@ class MultiClassMAA(Likelihood):
             alpha_nr_2[alpha_nr_2 < 1e-6] = 1e-6 #numerical stability
             d_alpha_fk = -np.reshape(pi_rn, (N, 1, R))*(Yhat - 
                         np.reshape(prod_k_zeta, (N, 1, R)))*np.reshape(zeta_kn, (N, K, 1))/np.reshape(alpha_nr_2, (N, 1, R))
-            # d_alpha_fk1 = np.zeros((N,K,R))
-            # for n in range(N):
-            #     for k in range(K):
-            #         for r in range(R):
-            #             d_alpha_fk1[n,k,r] = -pi_rn[n,r]*zeta_kn[n,k]*(Yhat[n,k,r]-prod_k_zeta[n,r])/alpha_nr[n,r]**2
-                        
             
             d2_dfk2_A = np.reshape(alpha_nr, (N, 1, R))*np.reshape(zeta_kn-
                                  zeta_kn**2, (N, K, 1)) + d_alpha_fk*np.reshape(zeta_kn, (N, K, 1))
-            # d2_dfk2_A1 = np.zeros((N,K,R))
-            # for n in range(N):
-            #     for k in range(K):
-            #         for r in range(R):
-            #             d2_dfk2_A1[n,k,r] = (zeta_kn[n,k] - zeta_kn[n,k]**2)*alpha_nr[n,r] + d_alpha_fk[n,k,r]*zeta_kn[n,k]
-                        
                         
             d2_dfk2_B = (d_alpha_fk*np.reshape(zeta_kn, (N, K, 1))*np.reshape(prod_k_zeta, (N, 1, R))+#
                          np.reshape(zeta_kn-zeta_kn**2, (N, K, 1))*np.reshape(alpha_nr, (N, 1, R))*
                          np.reshape(prod_k_zeta, (N, 1, R))+#
                          np.reshape(zeta_kn**2, (N, K, 1))*np.reshape(alpha_nr, (N, 1, R))*
                          (Yhat- np.reshape(prod_k_zeta, (N, 1, R))))#
-            # d2_dfk2_B1 = np.zeros((N,K,R))
-            # for n in range(N):
-            #     for k in range(K):
-            #         for r in range(R):
-            #             d2_dfk2_B1[n,k,r] = (d_alpha_fk[n,k,r]*zeta_kn[n,k]*prod_k_zeta[n,r]+
-            #                                  (zeta_kn[n,k] - zeta_kn[n,k]**2)*alpha_nr[n,r]*prod_k_zeta[n,r]+
-            #                                  zeta_kn[n,k]**2*alpha_nr[n,r]*(Yhat[n,k,r]-prod_k_zeta[n,r]))
-            
-            # d2_dfk21 = np.zeros((N,K))
-            # for n in range(N):
-            #     for k in range(K):
-            #         aux = 0
-            #         for r in range(R):
-            #             aux += pi_rn[n,r]*(Yhat[n,k,r]*d2_dfk2_A[n,k,r]-
-            #                                d2_dfk2_B[n,k,r])
-            #         d2_dfk21[n,k] = aux
                         
             d2_dfk2 = (np.reshape(pi_rn, (N, 1, R))*(Yhat*d2_dfk2_A-
                        d2_dfk2_B))
             d2_dfk2 = d2_dfk2*np.reshape(iAnn, (N,1,R))
             var_exp_dv_C[:,i,:K] = np.sum(d2_dfk2,axis=2)
             d_alpha_flr = -(pi_rn-pi_rn**2)*(prod_k_zeta-(1/K))/alpha_nr_2
-            # d_alpha_flr1 = np.zeros((N,R))
-            # for n in range(N):
-            #     for r in range(R): 
-            #         d_alpha_flr1[n,r] = -(pi_rn[n,r]-pi_rn[n,r]**2)*(prod_k_zeta[n,r]-1/K)/alpha_nr[n,r]**2
             d2_dflr2 = (d_alpha_flr*(pi_rn-pi_rn**2) +
                         alpha_nr*(2*pi_rn**3-3*pi_rn**2+pi_rn))*(prod_k_zeta-(1/K))*iAnn   
             var_exp_dv_C[:,i,K:] = d2_dflr2
-            # d2_dflr21 = np.zeros((N,R))
-            # for n in range(N):
-            #     for r in range(R): 
-            #         d2_dflr21[n,r] = (d_alpha_flr[n,r]*(pi_rn[n,r]-pi_rn[n,r]**2)+
-            #                           (2*pi_rn[n,r]**3 -3*pi_rn[n,r]**2+pi_rn[n,r])*alpha_nr[n,r])*(prod_k_zeta[n,r]-1/K)
             
                     
         var_exp_dm = np.mean(var_exp_dm_C,axis=1)
         var_exp_dv = 0.5*np.mean(var_exp_dv_C,axis=1)
         return var_exp_dm, var_exp_dv
 
-    # def predictive(self, m, v, gh_points=None, Y_metadata=None):
-    #     # Variational Expectation
-    #     # gh: Gaussian-Hermite quadrature
-    #     if gh_points is None:
-    #         gh_f, gh_w = self._gh_points()
-    #     else:
-    #         gh_f, gh_w = gh_points
-    #
-    #     gh_w = gh_w / np.sqrt(np.pi)
-    #     m, v= m.flatten(), v.flatten()
-    #     f = gh_f[None, :] * np.sqrt(2. * v[:, None]) + m[:, None]
-    #     mean = self.mean(f)
-    #     var = self.variance(f).dot(gh_w[:,None]) + self.mean_sq(f).dot(gh_w[:,None]) - np.square(mean.dot(gh_w[:,None]))
-    #     mean_pred = mean.dot(gh_w[:,None])
-    #     var_pred = var
-    #     return mean_pred, var_pred
 
     def predictive(self, m, v,Y_metadata=None):
         
@@ -375,7 +303,6 @@ class MultiClassMAA(Likelihood):
         log_pred = -np.log(num_samples) + logsumexp(self.logpdf(F_samples[:,:,0], Ytest), axis=-1)
         log_pred = np.array(log_pred).reshape(*Ytest.shape)
         "I just changed this to have the log_predictive of each data point and not a mean values"
-        #log_predictive = (1/num_samples)*log_pred.sum()
 
         return log_pred
 

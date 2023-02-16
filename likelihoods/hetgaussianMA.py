@@ -52,7 +52,6 @@ class HetGaussianMA(Likelihood):
 
     def var_exp(self, Y, M, V, GN=None, gh_points=None, Y_metadata=None):
         # Variational Expectation (Analytical)
-        # E_q(fid)[log(p(yi|fid))]
         N, _ = Y.shape
         iAnn = Y_metadata
         m_fmean, m_fvar = M[:, :1], M[:, 1:]
@@ -93,8 +92,6 @@ class HetGaussianMA(Likelihood):
             gh_f, gh_w = gh_points
 
         gh_w = gh_w / np.sqrt(np.pi)
-        # f1 = gh_f[None, :] * np.sqrt(2. * V[:,0,None]) + M[:,0,None]
-        # f2 = gh_f[None, :] * np.sqrt(2. * V[:,1,None]) + M[:,1,None]
         
         _, R = M.shape
         mean_pred = []
@@ -122,7 +119,6 @@ class HetGaussianMA(Likelihood):
         log_pred = -np.log(num_samples) + logsumexp(self.logpdf_sampling(F_samples, Ytest), axis=-1)
         log_pred = np.array(log_pred).reshape(*Ytest.shape)
         "I just changed this to have the log_predictive of each data point and not a mean values"
-        #log_predictive = (1/num_samples)*log_pred.sum()
 
         return log_pred
 

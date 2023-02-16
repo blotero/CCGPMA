@@ -255,8 +255,6 @@ class MultiClassMA(Likelihood):
             alpha_im = gh_f[None, :] * np.sqrt(2. * v_g[:,r:r+1]) + m_g[:,r:r+1]
             zn = self.logisticFunc(alpha_im)
             Eq_g[:,r] = (1/np.sqrt(np.pi))*zn.dot(gh_w[:,None]).flatten()
-        # Eq_g = self.KappaFuncEx(m_g, v_g)
-        # Eq_g = np.clip(Eq_g, 1e-9, 1. - 1e-9) #numerical stability
         
         # The term \sum_{k=1}^{K}C_{k,n}^r\log(\zeta_{k,n})
         A = np.sum((Yhat*np.reshape(var_exp_log_zeta, (N, K, 1))), axis = 1)
@@ -312,14 +310,6 @@ class MultiClassMA(Likelihood):
         
         # E_{q(f_{1,n})...q(f_{K,n})}[zeta]
         
-        
-        # Auxxx = np.empty((m.shape[0],K))
-        # auxDif = np.empty((m.shape[0],R))
-        # for k in range(K):
-        #     auxDif = np.matlib.repmat(var_exp_zeta[:,k:k+1],1,R)
-        #     Auxxx[:,k] = -0.5*np.sum(Eq_g*(auxDif - auxDif**2)*iAnn, 1)
-        
-
         var_exp_dm[:, :K] = np.sum(np.reshape(Eq_g*iAnn, (N,1,R))* \
                                    (Yhat - np.reshape(var_exp_zeta, (N, K, 1))), axis=2)     
         var_exp_dv[:, :K] = -0.5*np.sum( (np.reshape(Eq_g*iAnn, (N,1,R))* \
@@ -343,22 +333,6 @@ class MultiClassMA(Likelihood):
         
         return var_exp_dm, var_exp_dv
 
-    # def predictive(self, m, v, gh_points=None, Y_metadata=None):
-    #     # Variational Expectation
-    #     # gh: Gaussian-Hermite quadrature
-    #     if gh_points is None:
-    #         gh_f, gh_w = self._gh_points()
-    #     else:
-    #         gh_f, gh_w = gh_points
-    #
-    #     gh_w = gh_w / np.sqrt(np.pi)
-    #     m, v= m.flatten(), v.flatten()
-    #     f = gh_f[None, :] * np.sqrt(2. * v[:, None]) + m[:, None]
-    #     mean = self.mean(f)
-    #     var = self.variance(f).dot(gh_w[:,None]) + self.mean_sq(f).dot(gh_w[:,None]) - np.square(mean.dot(gh_w[:,None]))
-    #     mean_pred = mean.dot(gh_w[:,None])
-    #     var_pred = var
-    #     return mean_pred, var_pred
 
     def predictive(self, m, v,Y_metadata=None):
         
@@ -448,7 +422,6 @@ class MultiClassMA(Likelihood):
         log_pred = -np.log(num_samples) + logsumexp(self.logpdf(F_samples[:,:,0], Ytest), axis=-1)
         log_pred = np.array(log_pred).reshape(*Ytest.shape)
         "I just changed this to have the log_predictive of each data point and not a mean values"
-        #log_predictive = (1/num_samples)*log_pred.sum()
 
         return log_pred
 

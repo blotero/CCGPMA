@@ -44,7 +44,6 @@ class SVMOGP(GPy.core.SparseGP):
             Xmulti_batch, Ymulti_batch, iAnnmulti_batch = X, Y, Y_metadata['iAnn']
         else:
             # Makes a climin slicer to make drawing minibatches much quicker
-            #self.stochastic = False   #"This was True as Pablo had it"
             self.slicer_list = []
             [self.slicer_list.append(draw_mini_slices(Xmulti_task.shape[0], self.batch_size)) for Xmulti_task in self.Xmulti]
             Xmulti_batch, Ymulti_batch, iAnnmulti_batch = self.new_batch()
@@ -52,7 +51,6 @@ class SVMOGP(GPy.core.SparseGP):
             self.Y_metadata.update(iAnn = iAnnmulti_batch)
             
         # Initialize inducing points Z
-        #Z = kmm_init(self.X_all, self.num_inducing)
         self.Xdim = Z.shape[1]
         Z = np.tile(Z,(1,self.num_latent_funcs))
 
@@ -111,22 +109,9 @@ class SVMOGP(GPy.core.SparseGP):
         D = self.likelihood.num_output_functions(self.Y_metadata)
         N = self.X.shape[0]
         M = self.num_inducing
-        # _, B_list = util.LCM(input_dim=self.Xdim, output_dim=D, rank=1, kernels_list=self.kern_list, W_list=self.W_list,
-        #                      kappa_list=self.kappa_list)
         Z_grad = np.zeros_like(self.Z.values)
         for q, kern_q in enumerate(self.kern_list):
             # Update the variational parameter gradients:
-            # SVI + VEM
-            # if self.stochastic:
-            #     if self.vem_step:
-            #         self.q_u_means[:, q:q + 1].gradient = self.gradients['dL_dmu_u'][q]
-            #         self.q_u_chols[:, q:q + 1].gradient = self.gradients['dL_dL_u'][q]
-            #     else:
-            #         self.q_u_means[:, q:q+1].gradient = np.zeros(self.gradients['dL_dmu_u'][q].shape)
-            #         self.q_u_chols[:,q:q+1].gradient = np.zeros(self.gradients['dL_dL_u'][q].shape)
-            # else:
-            #     self.q_u_means[:, q:q + 1].gradient = self.gradients['dL_dmu_u'][q]
-            #     self.q_u_chols[:, q:q + 1].gradient = self.gradients['dL_dL_u'][q]
 
             self.q_u_means[:, q:q + 1].gradient = self.gradients['dL_dmu_u'][q]
             self.q_u_chols[:, q:q + 1].gradient = self.gradients['dL_dL_u'][q]
@@ -140,46 +125,21 @@ class SVMOGP(GPy.core.SparseGP):
             KuqF = []
             for d in range(D):
                 Kffdiag.append(kern_q.Kdiag(self.Xmulti[f_index[d]]) * self.gradients['dL_dKdiag'][q][d])
-                #Kffdiag.append(self.gradients['dL_dKdiag'][q][d])   #old line
-                #KuqF.append(self.gradients['dL_dKmn'][q][d] * kern_q.K(self.Z[:,q*self.Xdim:q*self.Xdim+self.Xdim], self.Xmulti[f_index[d]]))   #old line
                 KuqF.append(kern_q.K(self.Z[:,q*self.Xdim:q*self.Xdim+self.Xdim], self.Xmulti[f_index[d]]) * self.gradients['dL_dKmn'][q][d])
 
             util.update_gradients_diag(self.B_list[q], Kffdiag)
             Bgrad = self.B_list[q].gradient.copy()
             util.update_gradients_Kmn(self.B_list[q], KuqF, D)
             Bgrad += self.B_list[q].gradient.copy()
-            # SVI + VEM
-            # if self.stochastic:
-            #     if self.vem_step:
-            #         self.B_list[q].gradient = np.zeros(Bgrad.shape)
-            #     else:
-            #         self.B_list[q].gradient = Bgrad
-            # else:
-            #     self.B_list[q].gradient = Bgrad
-
             self.B_list[q].gradient = Bgrad
 
             for d in range(self.likelihood.num_output_functions(self.Y_metadata)):
-                #kern_q.update_gradients_full(self.gradients['dL_dKmn'][q][d], self.Z[:,q*self.Xdim:q*self.Xdim+self.Xdim], self.Xmulti[f_index[d]])
                 kern_q.update_gradients_full(self.B_list[q].W[d] * self.gradients['dL_dKmn'][q][d],self.Z[:, q * self.Xdim:q * self.Xdim + self.Xdim],self.Xmulti[f_index[d]])
 
-                #grad += B_list[q].W[d]*kern_q.gradient.copy()   #old line
-                #grad += self.B_list[q].W[d] * kern_q.gradient.copy()    #Juan wrote this
-                grad += kern_q.gradient.copy()  # Juan wrote this
+                grad += kern_q.gradient.copy()
 
-                #kern_q.update_gradients_diag(self.gradients['dL_dKdiag'][q][d], self.Xmulti[f_index[d]])
                 kern_q.update_gradients_diag(self.B_list[q].B[d,d] *self.gradients['dL_dKdiag'][q][d], self.Xmulti[f_index[d]])
-                #grad += B_list[q].B[d,d] * kern_q.gradient.copy()              #old line
-                #grad += self.B_list[q].B[d, d] * kern_q.gradient.copy()            #Juan wrote this line
-                grad += kern_q.gradient.copy()  # Juan wrote this line
-                # SVI + VEM
-            # if self.stochastic:
-            #     if self.vem_step:
-            #         kern_q.gradient = np.zeros(grad.shape)
-            #     else:
-            #         kern_q.gradient = grad
-            # else:
-            #     kern_q.gradient = grad
+                grad += kern_q.gradient.copy()
 
             kern_q.gradient = grad
 
@@ -187,21 +147,8 @@ class SVMOGP(GPy.core.SparseGP):
                 Z_grad[:,q*self.Xdim:q*self.Xdim+self.Xdim] += kern_q.gradients_X(self.gradients['dL_dKmm'][q], self.Z[:,q*self.Xdim:q*self.Xdim+self.Xdim]).copy()
                 for d in range(self.likelihood.num_output_functions(self.Y_metadata)):
                     Z_grad[:,q*self.Xdim:q*self.Xdim+self.Xdim]+= self.B_list[q].W[d]*kern_q.gradients_X(self.gradients['dL_dKmn'][q][d], self.Z[:, q * self.Xdim:q * self.Xdim + self.Xdim],self.Xmulti[f_index[d]]).copy()
-                    #Z_grad[:,q*self.Xdim:q*self.Xdim+self.Xdim] += kern_q.gradients_X(self.B_list[q].W[d]*self.gradients['dL_dKmn'][q][d], self.Z[:,q*self.Xdim:q*self.Xdim+self.Xdim], self.Xmulti[f_index[d]])
 
-                #self.Z.gradient[:] = Z_grad
         self.Z.gradient[:] = Z_grad
-        # if not self.Z.is_fixed:
-        #     #SVI + VEM
-        #     if self.stochastic:
-        #         if self.vem_step:
-        #             self.Z.gradient[:] = np.zeros(Z_grad.shape)
-        #         else:
-        #             self.Z.gradient[:] = Z_grad
-        #     else:
-        #         self.Z.gradient[:] = Z_grad
-        #
-        #     self.Z.gradient[:] = Z_grad
 
     def set_data(self, X, Y, iAnn):
         """
@@ -232,14 +179,6 @@ class SVMOGP(GPy.core.SparseGP):
     def stochastic_grad(self, parameters):
         self.set_data(*self.new_batch())
         stochastic_gradients = self._grads(parameters)
-        # if self.vem_step:
-        #     if self.ve_count > 2:
-        #         self.ve_count = 0
-        #         self.vem_step = False
-        #     else:
-        #         self.ve_count += 1
-        # else:
-        #     self.vem_step = True
         return stochastic_gradients
 
     def callback(self, i, max_iter, verbose=True, verbose_plot=False):
@@ -318,7 +257,6 @@ class SVMOGP(GPy.core.SparseGP):
                 v_task_pred = np.empty((Xpred[t].shape[0], num_f_task))
                 for d in range(D):
                     if f_index[d] == t:
-                        #m_task_pred[:,d_index[d],None], v_task_pred[:,d_index[d],None] = self._raw_predict_f(Xpred[f_index[d]], output_function_ind=d)
                         m_task_pred[:, d_index[d], None], v_task_pred[:, d_index[d], None] = posteriors_F[d].mean.copy(), np.diag(posteriors_F[d].covariance.copy()) [:,None]
 
                 m_F_pred.append(m_task_pred)

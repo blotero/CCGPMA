@@ -94,11 +94,6 @@ def random_W_kappas(Q,D,rank, experiment=False):
     for q in range(Q):
         p = np.random.binomial(n=1, p=0.5*np.ones((D,1)))
         Ws = p*np.random.normal(loc=0.5, scale=0.5, size=(D,1)) - (p-1)*np.random.normal(loc=-0.5, scale=0.5, size=(D,1))
-        # if q == 0:
-        #     Ws[0] = 1
-        #     Ws[1:] = 0
-        # else:
-        #     Ws[0] = 0
         
         W_list.append(Ws / np.sqrt(rank)) # deberían ser tanto positivos como negativos
         if experiment:
@@ -177,8 +172,6 @@ def cross_covariance(X, Z, B, kernel_list, d):
     Kfdu = np.empty([N,M*Q])
     for q, B_q in enumerate(B):
         Kfdu[:, q * M:(q * M) + M] = B_q.W[d] * kernel_list[q].K(X, Z[:, q*Xdim:q*Xdim+Xdim])
-        #Kfdu[:,q*M:(q*M)+M] = B_q.W[d]*kernel_list[q].K(X,Z[:,q,None])
-        #Kfdu[:, q * M:(q * M) + M] = B_q.B[d,d] * kernel_list[q].K(X, Z[:,q,None])
     return Kfdu
 
 def function_covariance(X, B, kernel_list, d):
@@ -207,7 +200,6 @@ def latent_funs_cov(Z, kernel_list):
     Q = len(kernel_list)
     M,Dz = Z.shape
     Xdim = int(Dz/Q)
-    #Kuu = np.zeros([Q*M,Q*M])
     Kuu = np.empty((Q, M, M))
     Luu = np.empty((Q, M, M))
     Kuui = np.empty((Q, M, M))
@@ -308,7 +300,6 @@ def vem_algorithm(model, vem_iters=None, maxIter_perVEM = None, step_rate=None ,
         maxIter_perVEM = 100
 
     model['.*.kappa'].fix() # must be always fixed
-    #model.elbo = np.empty((vem_iters,1))
 
     if model.batch_size is None:
 

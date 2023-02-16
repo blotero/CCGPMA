@@ -205,22 +205,6 @@ class BinaryClassMA(Likelihood):
         
         return var_exp_dm, var_exp_dv
 
-    # def predictive(self, m, v, gh_points=None, Y_metadata=None):
-    #     # Variational Expectation
-    #     # gh: Gaussian-Hermite quadrature
-    #     if gh_points is None:
-    #         gh_f, gh_w = self._gh_points()
-    #     else:
-    #         gh_f, gh_w = gh_points
-    #
-    #     gh_w = gh_w / np.sqrt(np.pi)
-    #     m, v= m.flatten(), v.flatten()
-    #     f = gh_f[None, :] * np.sqrt(2. * v[:, None]) + m[:, None]
-    #     mean = self.mean(f)
-    #     var = self.variance(f).dot(gh_w[:,None]) + self.mean_sq(f).dot(gh_w[:,None]) - np.square(mean.dot(gh_w[:,None]))
-    #     mean_pred = mean.dot(gh_w[:,None])
-    #     var_pred = var
-    #     return mean_pred, var_pred
 
     def predictive(self, m, v,Y_metadata=None):
         # This can be checked in eq 4.152 Pattern recognition Bishop
